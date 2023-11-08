@@ -8,7 +8,7 @@ DLL Forward is a tool that allows for creation of, x86 or x64, mangled or unmang
 After downloading the binaries or building the project for yourself, you may use the generated executable as follows:
 
 ```bash
-DLLProxinator <input> <output (optional)>
+DLLForward <input> <output (optional)>
 ```
 Where the parameters represent:
 - **input**: The input DLL file path which will be proxied, choose the desired architecture instance
@@ -16,7 +16,7 @@ Where the parameters represent:
 
 ## Example
 ```bash
-DLLProxinator "C:/Windows/System32/msimg32.dll" "./outheader.h"
+DLLForward "C:/Windows/System32/msimg32.dll" "./outheader.h"
 ```
 Should generate the following header file at **outheader.h**:
 
