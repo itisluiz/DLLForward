@@ -1,0 +1,5 @@
+{
+	"name": "dllforward",
+	"version": "0.1",
+	"dependencies": ["cxxopts"]
+}
