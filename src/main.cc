@@ -17,7 +17,7 @@ struct ExitCodes
 
 int main(int argc, char* argv[])
 {
-	cxxopts::Options options("DLL Forward", "Generate files for creating a DLL Proxy (Man in the middle) to any other DLL.");
+	cxxopts::Options options("DLLForward", "Generate files for creating a DLL Proxy (Man in the middle) to any other DLL.");
 
     options.add_options()
         ("i,input", "Input DLL path", cxxopts::value<std::string>(), "The DLL that will be proxied, be mindful of the DLL's architecture/bitness.")

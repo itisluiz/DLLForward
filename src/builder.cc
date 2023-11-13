@@ -37,6 +37,6 @@ void buildResult(const fs::path& dllPath, const fs::path& outFile, Architecture 
 
     file << "}\n"
 #include <boilerplate/bottom.inl>
-        << '\n';
+        ;
 
 }
