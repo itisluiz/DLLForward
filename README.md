@@ -1,3 +1,4 @@
+
 # DLL Forward
 ![](https://i.imgur.com/slrvrXM.png)
 
@@ -22,7 +23,7 @@ Should generate the following header file at **outheader.h**:
 
 
 ```cpp
-// DLL Forward by itisluiz v0.1
+// DLL Forward by itisluiz v1.0
 #pragma once
 #include <cstdint>
 #include <Windows.h>
@@ -39,57 +40,58 @@ struct Export
 	const uint32_t rva;
 };
 
+#pragma optimize("", off)
+
 static volatile uint16_t volatileWord;
-static _declspec(noinline) void __CALL_DUMMY()
-{ 
-	volatileWord = 0;
-}
+static __declspec(noinline) void __CALL_DUMMY() { volatileWord = 0; }
 
-// Proxy header generated for msimg32.dll (32 bit)
-static_assert(sizeof(void*) == 4, "The proxied DLL must match the architecture of the proxy DLL");
+// Proxy header generated for msimg32.dll (64 bit)
+static_assert(sizeof(void*) == 8, "The proxied DLL must match the architecture of the proxy DLL");
 
-// 2 -> AlphaBlend (RVA 0x1420)
-_declspec(noinline) void __EXPORT_DUMMY2()
+// 2 -> AlphaBlend (RVA 0x1010)
+void __EXPORT_DUMMY2()
 {
 #pragma comment(linker, "/EXPORT:AlphaBlend=" __FUNCDNAME__ ",@2")
 	__CALL_DUMMY();
 	volatileWord = 2;
 }
 
-// 3 -> DllInitialize (RVA 0x1530)
-_declspec(noinline) void __EXPORT_DUMMY3()
+// 3 -> DllInitialize (RVA 0x1180)
+void __EXPORT_DUMMY3()
 {
 #pragma comment(linker, "/EXPORT:DllInitialize=" __FUNCDNAME__ ",@3")
 	__CALL_DUMMY();
 	volatileWord = 3;
 }
 
-// 4 -> GradientFill (RVA 0x14f0)
-_declspec(noinline) void __EXPORT_DUMMY4()
+// 4 -> GradientFill (RVA 0x1620)
+void __EXPORT_DUMMY4()
 {
 #pragma comment(linker, "/EXPORT:GradientFill=" __FUNCDNAME__ ",@4")
 	__CALL_DUMMY();
 	volatileWord = 4;
 }
 
-// 5 -> TransparentBlt (RVA 0x15c0)
-_declspec(noinline) void __EXPORT_DUMMY5()
+// 5 -> TransparentBlt (RVA 0x1570)
+void __EXPORT_DUMMY5()
 {
 #pragma comment(linker, "/EXPORT:TransparentBlt=" __FUNCDNAME__ ",@5")
 	__CALL_DUMMY();
 	volatileWord = 5;
 }
 
-// 1 -> vSetDdrawflag (RVA 0x16b0)
-_declspec(noinline) void __EXPORT_DUMMY1()
+// 1 -> vSetDdrawflag (RVA 0x1560)
+void __EXPORT_DUMMY1()
 {
 #pragma comment(linker, "/EXPORT:vSetDdrawflag=" __FUNCDNAME__ ",@1")
 	__CALL_DUMMY();
 	volatileWord = 1;
 }
 
+#pragma optimize("", on)
+
 constexpr char proxiedDll[]{ "C:/Windows/System32/msimg32.dll" };
-constexpr Export exports[]{ { __EXPORT_DUMMY2, "AlphaBlend", 2, 0x1420 }, { __EXPORT_DUMMY3, "DllInitialize", 3, 0x1530 }, { __EXPORT_DUMMY4, "GradientFill", 4, 0x14f0 }, { __EXPORT_DUMMY5, "TransparentBlt", 5, 0x15c0 }, { __EXPORT_DUMMY1, "vSetDdrawflag", 1, 0x16b0 } };
+constexpr Export exports[]{ { __EXPORT_DUMMY2, "AlphaBlend", 2, 0x1010 }, { __EXPORT_DUMMY3, "DllInitialize", 3, 0x1180 }, { __EXPORT_DUMMY4, "GradientFill", 4, 0x1620 }, { __EXPORT_DUMMY5, "TransparentBlt", 5, 0x1570 }, { __EXPORT_DUMMY1, "vSetDdrawflag", 1, 0x1560 } };
 }
 
 static HMODULE setup()
@@ -101,21 +103,30 @@ static HMODULE setup()
 		uintptr_t pProxiedMethod{ reinterpret_cast<uintptr_t>(hProxiedDLL) + exportEntry.rva };
 		uintptr_t pProxyMethod{ reinterpret_cast<uintptr_t>(exportEntry.method) };
 
+#ifdef _WIN64
+		uint8_t opcodes[14]{ 0xFF, 0x25, 0x00, 0x00, 0x00, 0x00 };
+		*reinterpret_cast<uintptr_t*>(opcodes + 6) = pProxiedMethod;
+#else
+		uint8_t opcodes[5]{ 0xE9 };
+		*reinterpret_cast<uintptr_t*>(opcodes + 1) = pProxiedMethod - pProxyMethod - sizeof(opcodes);
+#endif
+
 		DWORD originalProtect, newProtect;
-		VirtualProtect(reinterpret_cast<void*>(pProxyMethod), 5, PAGE_EXECUTE_READWRITE, &originalProtect);
-		*reinterpret_cast<uint8_t*>(pProxyMethod) = 0xE9;
-		*reinterpret_cast<int32_t*>(pProxyMethod + 1) = static_cast<int32_t>(pProxiedMethod - pProxyMethod - 5);
-		VirtualProtect(reinterpret_cast<void*>(pProxyMethod), 5, originalProtect, &newProtect);
+		uint8_t* pProxyMethodBytes{ reinterpret_cast<uint8_t*>(pProxyMethod) };
+		VirtualProtect(pProxyMethodBytes, sizeof(opcodes), PAGE_EXECUTE_READWRITE, &originalProtect);
+		memcpy_s(pProxyMethodBytes, sizeof(opcodes), opcodes, sizeof(opcodes));
+		VirtualProtect(pProxyMethodBytes, sizeof(opcodes), originalProtect, &newProtect);
 	}
 
 	return hProxiedDLL;
 }
 }
 
-
 ```
-### This header file should be included in your project where the implementation of the `DllMain` entry point is.
-### You must call `dllforward::setup()` in DllMain when `fdwReason` is `DLL_PROCESS_ATTACH`
+
+### Setup and initialization notes
+- This header file should be included in your project where the implementation of the `DllMain` entry point is.
+- You must call `dllforward::setup()` in DllMain when `fdwReason` is `DLL_PROCESS_ATTACH`
 
 The header is mostly composed of boilerplate in `dllforward::internal` for exporting the functions with the same signature and ordinal as the original DLL, and `setup()` implements the logic to redirect (patch) the dummy exports to real the real exports.
 

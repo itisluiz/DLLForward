@@ -2,7 +2,7 @@
 #include <fstream>
 
 #define BUILD_EXPORT_IDENTIFIER(ordinal) "__EXPORT_DUMMY" << ordinal
-#define BUILD_EXPORT_DUMMY(name, ordinal) "_declspec(noinline) void " << BUILD_EXPORT_IDENTIFIER(ordinal) << "()\n{\n" <<\
+#define BUILD_EXPORT_DUMMY(name, ordinal) "void " << BUILD_EXPORT_IDENTIFIER(ordinal) << "()\n{\n" <<\
     "#pragma comment(linker, \"/EXPORT:" << name << "=\" __FUNCDNAME__ \",@" << ordinal << "\")\n"\
     "\t__CALL_DUMMY();\n"\
     "\tvolatileWord = " << ordinal << ";\n}\n\n"
@@ -26,6 +26,8 @@ void buildResult(const fs::path& dllPath, const fs::path& outFile, Architecture 
         file << "// " << exportEntry << '\n';
         file << BUILD_EXPORT_DUMMY(exportEntry.name, exportEntry.ordinal);
     }
+
+    file << "#pragma optimize(\"\", on)" "\n\n";
 
     file << "constexpr char proxiedDll[]{ " << dllPath << " };" "\n";
     file << "constexpr Export exports[]{ ";

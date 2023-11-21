@@ -1,55 +1,29 @@
-cmake_minimum_required (VERSION 3.21)
-project("dllforward" VERSION 0.1 LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.21)
+project("dllforward" VERSION 1.0 LANGUAGES CXX)
 
-## interface
-set(PROJECT_INTERFACE ${PROJECT_NAME}_interface)
-add_library(${PROJECT_INTERFACE} INTERFACE)
+## QoL definitions
+add_compile_definitions(-DPROJECT_VERSION="${PROJECT_VERSION}" -DBUILD_SHARED_LIBS=$<BOOL:${BUILD_SHARED_LIBS}>)
 
-# settings
-target_compile_features(${PROJECT_INTERFACE} INTERFACE cxx_std_17)
+## Project's base, containing all that's to be inherited
+set(PROJECT_BASE ${PROJECT_NAME}-base)
+add_library(${PROJECT_BASE} INTERFACE)
+target_compile_features(${PROJECT_BASE} INTERFACE cxx_std_17)
+target_include_directories(${PROJECT_BASE} INTERFACE "include")
 
-# definitions
-add_compile_definitions(-DCMAKE_PROJECT_VERSION="${CMAKE_PROJECT_VERSION}")
-
-# sources
-file(GLOB_RECURSE PROJECT_SOURCES "src/*.cpp" "src/*.cc")
-target_sources(${PROJECT_INTERFACE} INTERFACE ${PROJECT_SOURCES})
-
-# includes
-target_include_directories(${PROJECT_INTERFACE} INTERFACE "include")
-
-# architecture
-if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-	set(TARGET_TRIPLET x86-${TARGET_TRIPLET_OSNAME})
-else()
-	set(TARGET_TRIPLET x64-${TARGET_TRIPLET_OSNAME})
+## Project's dependencies adding and linking
+if(NOT TARGET cxxopts)
+	add_subdirectory("lib/cxxopts")
 endif()
 
-# linkage
-if(DEPENDENCY_STATIC_LINKAGE)
-	set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-	set(VCPKG_TARGET_TRIPLET ${TARGET_TRIPLET}-static)
-else()
-	set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
-	set(VCPKG_TARGET_TRIPLET ${TARGET_TRIPLET})
-endif()
+target_link_libraries(${PROJECT_BASE} INTERFACE cxxopts::cxxopts imagehlp)
 
-# depencencies
-find_package(cxxopts REQUIRED)
-target_link_libraries(${PROJECT_INTERFACE} INTERFACE cxxopts::cxxopts imagehlp.lib)
+## Source globbing, exclude main file
+file(GLOB_RECURSE PROJECT_SOURCES "src/*.cpp" "src/*.cxx" "src/*.cc")
+list(FILTER PROJECT_SOURCES EXCLUDE REGEX "src/main.cc$")
+target_sources(${PROJECT_BASE} INTERFACE ${PROJECT_SOURCES})
 
-## output
+## Project output, end-product
 set(PROJECT_TARGET ${PROJECT_NAME})
-
-if(OUTPUT_BINARY_TYPE STREQUAL "win32")
-	add_executable(${PROJECT_TARGET} WIN32)
-elseif(OUTPUT_BINARY_TYPE STREQUAL "dll")
-	add_library(${PROJECT_TARGET} SHARED)
-elseif(OUTPUT_BINARY_TYPE STREQUAL "lib")
-	add_library(${PROJECT_TARGET} STATIC)
-else()
-	add_executable(${PROJECT_TARGET})
-endif()
-
-# linking
-target_link_libraries(${PROJECT_TARGET} ${PROJECT_INTERFACE})
+# add_library(${PROJECT_TARGET} "src/main.cc")
+add_executable(${PROJECT_TARGET} "src/main.cc")
+target_link_libraries(${PROJECT_TARGET} PUBLIC ${PROJECT_BASE})

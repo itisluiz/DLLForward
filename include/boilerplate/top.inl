@@ -1,4 +1,4 @@
-"// DLL Forward by itisluiz v" CMAKE_PROJECT_VERSION R"(
+"// DLL Forward by itisluiz v" PROJECT_VERSION R"(
 #pragma once
 #include <cstdint>
 #include <Windows.h>
@@ -15,9 +15,8 @@ struct Export
 	const uint32_t rva;
 };
 
+#pragma optimize("", off)
+
 static volatile uint16_t volatileWord;
-static _declspec(noinline) void __CALL_DUMMY()
-{ 
-	volatileWord = 0;
-}
+static __declspec(noinline) void __CALL_DUMMY() { volatileWord = 0; }
 )"

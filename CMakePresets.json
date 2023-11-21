@@ -5,15 +5,12 @@
 			"name": "default",
 			"hidden": true,
 			"generator": "Ninja",
-			"toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
 			"cacheVariables": {
-				"OUTPUT_BINARY_TYPE": "exe",
-				"TARGET_TRIPLET_OSNAME": "windows",
-				"DEPENDENCY_STATIC_LINKAGE": true
+				"BUILD_TESTING": "ON"
 			}
 		},
 		{
-			"name": "x86-debug",
+			"name": "x86-Debug",
 			"displayName": "x86 Debug",
 			"inherits": "default",
 			"architecture": {
@@ -25,7 +22,7 @@
 			}
 		},
 		{
-			"name": "x64-debug",
+			"name": "x64-Debug",
 			"displayName": "x64 Debug",
 			"inherits": "default",
 			"architecture": {
@@ -37,7 +34,7 @@
 			}
 		},
 		{
-			"name": "x86-release",
+			"name": "x86-Release",
 			"displayName": "x86 Release",
 			"inherits": "default",
 			"architecture": {
@@ -49,7 +46,7 @@
 			}
 		},
 		{
-			"name": "x64-release",
+			"name": "x64-Release",
 			"displayName": "x64 Release",
 			"inherits": "default",
 			"architecture": {
