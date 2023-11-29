@@ -28,3 +28,4 @@ public:
 
 Architecture parseArchitecture(const fs::path& path);
 std::vector<Export> parseExports(const fs::path& path);
+std::string parseMangled(const std::string& mangledName);

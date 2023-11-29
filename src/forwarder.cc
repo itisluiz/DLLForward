@@ -4,7 +4,7 @@
 #include <iostream>
 #include <fstream>
 
-bool makeProxy(const fs::path& dllPath, const fs::path& outFile)
+bool makeHeader(const fs::path& dllPath, const fs::path& outFile)
 {
 	try
 	{
@@ -25,7 +25,7 @@ bool makeProxy(const fs::path& dllPath, const fs::path& outFile)
 			std::cout << '\t' << exportEntry << '\n';
 		}
 
-		buildResult(dllPath, outFile, architecture, exports);
+		buildResultHeader(dllPath, outFile, architecture, exports);
 		std::cout << "Generated output at \"" << fs::absolute(outFile).string() << "\"" "\n";
 	}
 	catch (const std::system_error& e)
@@ -34,6 +34,37 @@ bool makeProxy(const fs::path& dllPath, const fs::path& outFile)
 		return false;
 	}
 	catch(const std::runtime_error& e)
+	{
+		std::cerr << e.what() << '\n';
+		return false;
+	}
+
+	return true;
+}
+
+bool makeDefinition(const fs::path& dllPath, const fs::path& outFile)
+{
+	try
+	{
+		std::vector<Export> exports{ parseExports(dllPath) };
+
+		std::cout << "There are " << exports.size() << " exports:" "\n";
+
+		for (size_t hint{ 0 }; hint < exports.size(); ++hint)
+		{
+			const Export& exportEntry{ exports[hint] };
+			std::cout << '\t' << exportEntry << '\n';
+		}
+
+		buildResultDefinition(dllPath, outFile, exports);
+		std::cout << "Generated output at \"" << fs::absolute(outFile).string() << "\"" "\n";
+	}
+	catch (const std::system_error& e)
+	{
+		std::cerr << e.what() << " [" << e.code() << "]" "\n";
+		return false;
+	}
+	catch (const std::runtime_error& e)
 	{
 		std::cerr << e.what() << '\n';
 		return false;

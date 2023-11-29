@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project("dllforward" VERSION 1.0 LANGUAGES CXX)
+project("dllforward" VERSION 1.1 LANGUAGES CXX)
 
 ## QoL definitions
 add_compile_definitions(-DPROJECT_VERSION="${PROJECT_VERSION}" -DBUILD_SHARED_LIBS=$<BOOL:${BUILD_SHARED_LIBS}>)
@@ -22,8 +22,11 @@ file(GLOB_RECURSE PROJECT_SOURCES "src/*.cpp" "src/*.cxx" "src/*.cc")
 list(FILTER PROJECT_SOURCES EXCLUDE REGEX "src/main.cc$")
 target_sources(${PROJECT_BASE} INTERFACE ${PROJECT_SOURCES})
 
+## Project's resource files
+set(PROJECT_RESOURCES "res/app.rc" "res/app.ico")
+
 ## Project output, end-product
 set(PROJECT_TARGET ${PROJECT_NAME})
-# add_library(${PROJECT_TARGET} "src/main.cc")
-add_executable(${PROJECT_TARGET} "src/main.cc")
+# add_library(${PROJECT_TARGET} "src/main.cc" ${PROJECT_RESOURCES})
+add_executable(${PROJECT_TARGET} "src/main.cc" ${PROJECT_RESOURCES})
 target_link_libraries(${PROJECT_TARGET} PUBLIC ${PROJECT_BASE})

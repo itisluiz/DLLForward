@@ -9,13 +9,13 @@
 
 #define BUILD_EXPORT_ENTRY(name, ordinal, rva) "{ " << BUILD_EXPORT_IDENTIFIER(ordinal) << ", \"" << name << "\", " << ordinal << ", 0x" << std::hex << rva << std::dec << " }, "
 
-void buildResult(const fs::path& dllPath, const fs::path& outFile, Architecture architecture, const std::vector<Export>& exports)
+void buildResultHeader(const fs::path& dllPath, const fs::path& outFile, Architecture architecture, const std::vector<Export>& exports)
 {
     std::ofstream file(outFile);
     file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
     file << 
-#include <boilerplate/top.inl>
+#include <headerboilerplate/top.inl>
         << '\n';
 
     file << "// Proxy header generated for " << dllPath.filename().string() << " (" << (architecture == Architecture::kI386 ? "32" : "64") << " bit)" "\n";
@@ -23,7 +23,7 @@ void buildResult(const fs::path& dllPath, const fs::path& outFile, Architecture 
 
     for (const Export& exportEntry : exports)
     {
-        file << "// " << exportEntry << '\n';
+        file << "// #" << exportEntry.ordinal << ": " << exportEntry.name << " (" << parseMangled(exportEntry.name) << ")" "\n";
         file << BUILD_EXPORT_DUMMY(exportEntry.name, exportEntry.ordinal);
     }
 
@@ -38,7 +38,25 @@ void buildResult(const fs::path& dllPath, const fs::path& outFile, Architecture 
     file << " };\n";
 
     file << "}\n"
-#include <boilerplate/bottom.inl>
+#include <headerboilerplate/bottom.inl>
         ;
+
+}
+
+void buildResultDefinition(const fs::path& dllPath, const fs::path& outFile, const std::vector<Export>& exports)
+{
+    std::ofstream file(outFile);
+    file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+
+    file << "; DLLForward by itisluiz v" PROJECT_VERSION << '\n';
+
+    file << "LIBRARY " << dllPath.filename().replace_extension().string() << '\n';
+    file << "EXPORTS";
+
+    for (const Export& exportEntry : exports)
+    {
+        file << "\n" ";\t#" << exportEntry.ordinal << ": " << parseMangled(exportEntry.name) << '\n';
+        file << '\t' << exportEntry.name << '\n';
+    }
 
 }

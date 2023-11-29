@@ -60,11 +60,27 @@ std::vector<Export> parseExports(const fs::path& path)
             char* exportName = reinterpret_cast<char*>(
                 ImageRvaToVa(LoadedImage.FileHeader, LoadedImage.MappedAddress, dNameRVAs[i], nullptr));
 
-            Export exportEntry{ exportName, dOrdinals[i] + 1, static_cast<uint32_t>(dFunctions[dOrdinals[i]]) };
+            Export exportEntry{ exportName, static_cast<uint16_t>(dOrdinals[i] + 1), static_cast<uint32_t>(dFunctions[dOrdinals[i]]) };
             exportVector.push_back(exportEntry);
         }
     }
     UnMapAndLoad(&LoadedImage);
 
     return exportVector;
+}
+
+std::string parseMangled(const std::string& mangledName)
+{
+    std::string unmangledName;
+	unmangledName.resize(512);
+
+    DWORD writtenChars{ UnDecorateSymbolName(mangledName.c_str(), unmangledName.data(), static_cast<DWORD>(unmangledName.size()), UNDNAME_COMPLETE) };
+    if (writtenChars)
+    {   
+        unmangledName.resize(writtenChars);
+        unmangledName.shrink_to_fit();
+		return unmangledName;
+    }
+	else
+		return mangledName;
 }

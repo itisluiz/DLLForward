@@ -1,4 +1,4 @@
-"// DLL Forward by itisluiz v" PROJECT_VERSION R"(
+"// DLLForward by itisluiz v" PROJECT_VERSION R"(
 #pragma once
 #include <cstdint>
 #include <Windows.h>
