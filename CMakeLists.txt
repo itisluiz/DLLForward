@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project("dllforward" VERSION 1.1 LANGUAGES CXX)
+project("dllforward" VERSION 1.2 LANGUAGES CXX)
 
 ## QoL definitions
 add_compile_definitions(-DPROJECT_VERSION="${PROJECT_VERSION}" -DBUILD_SHARED_LIBS=$<BOOL:${BUILD_SHARED_LIBS}>)

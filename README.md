@@ -1,29 +1,27 @@
-
 # DLL Forward
 ![](https://i.imgur.com/slrvrXM.png)
 
 DLL Forward is a tool that allows for creation of, x86 or x64, mangled or unmangled signature, DLL proxies, redirecting the exports of an arbitrary DLL through your DLL instead.
 
 ## Usage
-
 After downloading the binaries or building the project for yourself, you may use the generated executable as follows:
 
 ```bash
-DLLForward <input> <output (optional)>
+DLLForward [--def] <input> <output (optional)>
 ```
 Where the parameters represent:
 - **input**: The input DLL file path which will be proxied, choose the desired architecture instance
-- **output**: The output path, which is a **header (*.h)** file containing the necessary information for proxying the input DLL.
+- **output**: The output path, which is a file built from the the input DLL's data, by default a **header (.h)** for proxying the DLL.
+-  **def**: Or `-d` for short, if set will generate a **module definition (.def)** instead of a proxy header from the input DLL.
 
-## Example
+## Header generation example
 ```bash
 DLLForward "C:/Windows/System32/msimg32.dll" "./outheader.h"
 ```
 Should generate the following header file at **outheader.h**:
 
-
 ```cpp
-// DLL Forward by itisluiz v1.0
+// DLLForward by itisluiz v1.2
 #pragma once
 #include <cstdint>
 #include <Windows.h>
@@ -45,10 +43,10 @@ struct Export
 static volatile uint16_t volatileWord;
 static __declspec(noinline) void __CALL_DUMMY() { volatileWord = 0; }
 
-// Proxy header generated for msimg32.dll (64 bit)
-static_assert(sizeof(void*) == 8, "The proxied DLL must match the architecture of the proxy DLL");
+// Proxy header generated for msimg32.dll (32 bit)
+static_assert(sizeof(void*) == 4, "The proxied DLL must match the architecture of the proxy DLL");
 
-// 2 -> AlphaBlend (RVA 0x1010)
+// #2: AlphaBlend (AlphaBlend)
 void __EXPORT_DUMMY2()
 {
 #pragma comment(linker, "/EXPORT:AlphaBlend=" __FUNCDNAME__ ",@2")
@@ -56,7 +54,7 @@ void __EXPORT_DUMMY2()
 	volatileWord = 2;
 }
 
-// 3 -> DllInitialize (RVA 0x1180)
+// #3: DllInitialize (DllInitialize)
 void __EXPORT_DUMMY3()
 {
 #pragma comment(linker, "/EXPORT:DllInitialize=" __FUNCDNAME__ ",@3")
@@ -64,7 +62,7 @@ void __EXPORT_DUMMY3()
 	volatileWord = 3;
 }
 
-// 4 -> GradientFill (RVA 0x1620)
+// #4: GradientFill (GradientFill)
 void __EXPORT_DUMMY4()
 {
 #pragma comment(linker, "/EXPORT:GradientFill=" __FUNCDNAME__ ",@4")
@@ -72,7 +70,7 @@ void __EXPORT_DUMMY4()
 	volatileWord = 4;
 }
 
-// 5 -> TransparentBlt (RVA 0x1570)
+// #5: TransparentBlt (TransparentBlt)
 void __EXPORT_DUMMY5()
 {
 #pragma comment(linker, "/EXPORT:TransparentBlt=" __FUNCDNAME__ ",@5")
@@ -80,7 +78,7 @@ void __EXPORT_DUMMY5()
 	volatileWord = 5;
 }
 
-// 1 -> vSetDdrawflag (RVA 0x1560)
+// #1: vSetDdrawflag (vSetDdrawflag)
 void __EXPORT_DUMMY1()
 {
 #pragma comment(linker, "/EXPORT:vSetDdrawflag=" __FUNCDNAME__ ",@1")
@@ -91,7 +89,7 @@ void __EXPORT_DUMMY1()
 #pragma optimize("", on)
 
 constexpr char proxiedDll[]{ "C:/Windows/System32/msimg32.dll" };
-constexpr Export exports[]{ { __EXPORT_DUMMY2, "AlphaBlend", 2, 0x1010 }, { __EXPORT_DUMMY3, "DllInitialize", 3, 0x1180 }, { __EXPORT_DUMMY4, "GradientFill", 4, 0x1620 }, { __EXPORT_DUMMY5, "TransparentBlt", 5, 0x1570 }, { __EXPORT_DUMMY1, "vSetDdrawflag", 1, 0x1560 } };
+constexpr Export exports[]{ { __EXPORT_DUMMY2, "AlphaBlend", 2, 0x1420 }, { __EXPORT_DUMMY3, "DllInitialize", 3, 0x1530 }, { __EXPORT_DUMMY4, "GradientFill", 4, 0x14f0 }, { __EXPORT_DUMMY5, "TransparentBlt", 5, 0x15c0 }, { __EXPORT_DUMMY1, "vSetDdrawflag", 1, 0x16b0 } };
 }
 
 static HMODULE setup()
@@ -100,7 +98,10 @@ static HMODULE setup()
 
 	for (const internal::Export& exportEntry : internal::exports)
 	{
-		uintptr_t pProxiedMethod{ reinterpret_cast<uintptr_t>(hProxiedDLL) + exportEntry.rva };
+		// uintptr_t pProxiedMethod{ reinterpret_cast<uintptr_t>(hProxiedDLL) + exportEntry.rva };
+		// uintptr_t pProxiedMethod{ reinterpret_cast<uintptr_t>(GetProcAddress(hProxiedDLL, MAKEINTRESOURCEA(exportEntry.ordinal))) };
+		uintptr_t pProxiedMethod{ reinterpret_cast<uintptr_t>(GetProcAddress(hProxiedDLL, exportEntry.name)) };
+
 		uintptr_t pProxyMethod{ reinterpret_cast<uintptr_t>(exportEntry.method) };
 
 #ifdef _WIN64
@@ -121,13 +122,41 @@ static HMODULE setup()
 	return hProxiedDLL;
 }
 }
+```
+
+This header file should be included in your project where the implementation of the `DllMain` entry point is. You must call `dllforward::setup()` in DllMain when `fdwReason` is `DLL_PROCESS_ATTACH`.
+
+**Note:** `proxiedDll` is the path the process will look for the original, proxied DLL. If you wish to work with relative paths, keep in mind the path will be relative to the cwd of the process that loads the DLL forwarder. 
+
+
+## Module definition generation example
+```bash
+DLLForward -d "C:/Windows/System32/msimg32.dll" "./outdefinition.def"
+```
+Should generate the following definition file at **outdefinition.def**:
+
+```
+; DLLForward by itisluiz v1.2
+LIBRARY msimg32
+EXPORTS
+;	#2: AlphaBlend
+	AlphaBlend
+
+;	#3: DllInitialize
+	DllInitialize
+
+;	#4: GradientFill
+	GradientFill
+
+;	#5: TransparentBlt
+	TransparentBlt
+
+;	#1: vSetDdrawflag
+	vSetDdrawflag
 
 ```
 
-### Setup and initialization notes
-- This header file should be included in your project where the implementation of the `DllMain` entry point is.
-- You must call `dllforward::setup()` in DllMain when `fdwReason` is `DLL_PROCESS_ATTACH`
-
-The header is mostly composed of boilerplate in `dllforward::internal` for exporting the functions with the same signature and ordinal as the original DLL, and `setup()` implements the logic to redirect (patch) the dummy exports to real the real exports.
-
-**Note:** `proxiedDll` is the path the process will look for the original, proxied DLL. If you wish to work with relative paths, keep in mind the path will be relative to the cwd of the process that loads the DLL forwarder. 
+Which in turn can be used to generate a stub (impblib) library with [lib.exe](https://learn.microsoft.com/en-us/cpp/build/reference/lib-reference?view=msvc-170):
+```bash
+lib /def:outdefinition.def /out:outimplib.lib /machine:x64
+````

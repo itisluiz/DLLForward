@@ -5,7 +5,10 @@ static HMODULE setup()
 
 	for (const internal::Export& exportEntry : internal::exports)
 	{
-		uintptr_t pProxiedMethod{ reinterpret_cast<uintptr_t>(hProxiedDLL) + exportEntry.rva };
+		// uintptr_t pProxiedMethod{ reinterpret_cast<uintptr_t>(hProxiedDLL) + exportEntry.rva };
+		// uintptr_t pProxiedMethod{ reinterpret_cast<uintptr_t>(GetProcAddress(hProxiedDLL, MAKEINTRESOURCEA(exportEntry.ordinal))) };
+		uintptr_t pProxiedMethod{ reinterpret_cast<uintptr_t>(GetProcAddress(hProxiedDLL, exportEntry.name)) };
+
 		uintptr_t pProxyMethod{ reinterpret_cast<uintptr_t>(exportEntry.method) };
 
 #ifdef _WIN64
