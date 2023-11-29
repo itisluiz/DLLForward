@@ -18,8 +18,15 @@ void buildResultHeader(const fs::path& dllPath, const fs::path& outFile, Archite
 #include <headerboilerplate/top.inl>
         << '\n';
 
-    file << "// Proxy header generated for " << dllPath.filename().string() << " (" << (architecture == Architecture::kI386 ? "32" : "64") << " bit)" "\n";
-    file << "static_assert(sizeof(void*) == " << (architecture == Architecture::kI386 ? 4 : 8) << ", \"The proxied DLL must match the architecture of the proxy DLL\");" "\n\n";
+    file << "// Proxy header generated for " << dllPath.filename().string();
+    
+    if (architecture != Architecture::kUnknown)
+    {
+        file << " (" << (architecture == Architecture::kI386 ? "32" : "64") << " bit)" "\n";
+        file << "static_assert(sizeof(void*) == " << (architecture == Architecture::kI386 ? 4 : 8) << ", \"The proxied DLL must match the architecture of the proxy DLL\");" "\n\n";
+    }
+    else
+        file << "\n\n";
 
     for (const Export& exportEntry : exports)
     {

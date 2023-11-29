@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project("dllforward" VERSION 1.2 LANGUAGES CXX)
+project("dllforward" VERSION 1.2.1 LANGUAGES CXX)
 
 ## Project's base, containing all that's to be inherited
 set(PROJECT_BASE ${PROJECT_NAME}-base)

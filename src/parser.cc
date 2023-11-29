@@ -18,7 +18,15 @@ Architecture parseArchitecture(const fs::path& path)
     IMAGE_DOS_HEADER dosHeader;
     IMAGE_NT_HEADERS32 ntHeader32;
 
+    PVOID oldRedirection{ NULL };
+    if (!Wow64DisableWow64FsRedirection(&oldRedirection))
+        throw std::system_error(std::error_code(GetLastError(), std::system_category()), "Failed to disable Wow64Fs redirection");
+
     std::ifstream file(path, std::ios::binary);
+
+    if (!Wow64RevertWow64FsRedirection(oldRedirection))
+        throw std::system_error(std::error_code(GetLastError(), std::system_category()), "Failed to revert Wow64Fs redirection");
+
     file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
     file.read(reinterpret_cast<char*>(&dosHeader), sizeof(dosHeader));
@@ -38,8 +46,16 @@ Architecture parseArchitecture(const fs::path& path)
 std::vector<Export> parseExports(const fs::path& path)
 {
     _LOADED_IMAGE LoadedImage;
+
+    PVOID oldRedirection{ NULL };
+    if (!Wow64DisableWow64FsRedirection(&oldRedirection))
+        throw std::system_error(std::error_code(GetLastError(), std::system_category()), "Failed to disable Wow64Fs redirection");
+
     if (!MapAndLoad(path.u8string().c_str(), nullptr, &LoadedImage, TRUE, TRUE))
         throw std::system_error(std::error_code(GetLastError(), std::system_category()), "MapAndLoad failed to load DLL");
+
+    if (!Wow64RevertWow64FsRedirection(oldRedirection))
+        throw std::system_error(std::error_code(GetLastError(), std::system_category()), "Failed to revert Wow64Fs redirection");
 
     std::vector<Export> exportVector;
 
