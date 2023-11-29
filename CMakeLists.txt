@@ -1,14 +1,14 @@
 cmake_minimum_required(VERSION 3.21)
 project("dllforward" VERSION 1.2 LANGUAGES CXX)
 
-## QoL definitions
-add_compile_definitions(-DPROJECT_VERSION="${PROJECT_VERSION}" -DBUILD_SHARED_LIBS=$<BOOL:${BUILD_SHARED_LIBS}>)
-
 ## Project's base, containing all that's to be inherited
 set(PROJECT_BASE ${PROJECT_NAME}-base)
 add_library(${PROJECT_BASE} INTERFACE)
 target_compile_features(${PROJECT_BASE} INTERFACE cxx_std_17)
 target_include_directories(${PROJECT_BASE} INTERFACE "include")
+
+## QoL definitions
+target_compile_definitions(${PROJECT_BASE} INTERFACE PROJECT_VERSION="${PROJECT_VERSION}" BUILD_SHARED_LIBS=$<BOOL:${BUILD_SHARED_LIBS}>)
 
 ## Project's dependencies adding and linking
 if(NOT TARGET cxxopts)

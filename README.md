@@ -1,5 +1,6 @@
 # DLL Forward
-![](https://i.imgur.com/slrvrXM.png)
+![my machine badge](https://forthebadge.com/images/badges/works-on-my-machine.svg)
+![workflow badge](https://github.com/itisluiz/DLLForward/actions/workflows/build.yml/badge.svg)
 
 DLL Forward is a tool that allows for creation of, x86 or x64, mangled or unmangled signature, DLL proxies, redirecting the exports of an arbitrary DLL through your DLL instead.
 
