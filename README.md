@@ -11,153 +11,72 @@ After downloading the binaries or building the project for yourself, you may use
 DLLForward [--def] <input> <output (optional)>
 ```
 Where the parameters represent:
-- **input**: The input DLL file path which will be proxied, choose the desired architecture instance
-- **output**: The output path, which is a file built from the the input DLL's data, by default a **header (.h)** for proxying the DLL.
+- **input**: The input DLL file path which will be proxied, choose the desired architecture instance (x86 or x64) of the DLL to proxy.
+- **output**: The output path, which is a file built from the the input DLL's data, by default a **header (.h)** with the same name as the proxied DLL.
 -  **def**: Or `-d` for short, if set will generate a **module definition (.def)** instead of a proxy header from the input DLL.
 
-## Header generation example
+### Creating a proxy example
 ```bash
-DLLForward "C:/Windows/System32/msimg32.dll" "./outheader.h"
+DLLForward "C:/Windows/System32/msimg32.dll" "./msimg32.h"
 ```
-Should generate the following header file at **outheader.h**:
 
-```cpp
-// DLLForward by itisluiz v1.2
-#pragma once
-#include <cstdint>
-#include <Windows.h>
+Will generate a header file `msimg32.h` at the current directory, this header must be included in your project for proxying the DLL. It should be included in your project where the implementation of the `DllMain` entry point is as you must call `dllforward::setup()` in DllMain when `fdwReason` is `DLL_PROCESS_ATTACH`.
 
-namespace dllforward
+Example project using the generated header (The project must be configured to build for the same architecture as the proxied DLL)
+
+`main.cpp`
+```cpp	
+#include "Windows.h"
+#include "msimg32.h"
+
+BOOL WINAPI DllMain(HMODULE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
-namespace internal
-{
-struct Export
-{ 
-	void(*method)(); 
-	const char* name; 
-	const uint16_t ordinal;
-	const uint32_t rva;
-};
-
-#pragma optimize("", off)
-
-static volatile uint16_t volatileWord;
-static __declspec(noinline) void __CALL_DUMMY() { volatileWord = 0; }
-
-// Proxy header generated for msimg32.dll (32 bit)
-static_assert(sizeof(void*) == 4, "The proxied DLL must match the architecture of the proxy DLL");
-
-// #2: AlphaBlend (AlphaBlend)
-void __EXPORT_DUMMY2()
-{
-#pragma comment(linker, "/EXPORT:AlphaBlend=" __FUNCDNAME__ ",@2")
-	__CALL_DUMMY();
-	volatileWord = 2;
-}
-
-// #3: DllInitialize (DllInitialize)
-void __EXPORT_DUMMY3()
-{
-#pragma comment(linker, "/EXPORT:DllInitialize=" __FUNCDNAME__ ",@3")
-	__CALL_DUMMY();
-	volatileWord = 3;
-}
-
-// #4: GradientFill (GradientFill)
-void __EXPORT_DUMMY4()
-{
-#pragma comment(linker, "/EXPORT:GradientFill=" __FUNCDNAME__ ",@4")
-	__CALL_DUMMY();
-	volatileWord = 4;
-}
-
-// #5: TransparentBlt (TransparentBlt)
-void __EXPORT_DUMMY5()
-{
-#pragma comment(linker, "/EXPORT:TransparentBlt=" __FUNCDNAME__ ",@5")
-	__CALL_DUMMY();
-	volatileWord = 5;
-}
-
-// #1: vSetDdrawflag (vSetDdrawflag)
-void __EXPORT_DUMMY1()
-{
-#pragma comment(linker, "/EXPORT:vSetDdrawflag=" __FUNCDNAME__ ",@1")
-	__CALL_DUMMY();
-	volatileWord = 1;
-}
-
-#pragma optimize("", on)
-
-constexpr char proxiedDll[]{ "C:/Windows/System32/msimg32.dll" };
-constexpr Export exports[]{ { __EXPORT_DUMMY2, "AlphaBlend", 2, 0x1420 }, { __EXPORT_DUMMY3, "DllInitialize", 3, 0x1530 }, { __EXPORT_DUMMY4, "GradientFill", 4, 0x14f0 }, { __EXPORT_DUMMY5, "TransparentBlt", 5, 0x15c0 }, { __EXPORT_DUMMY1, "vSetDdrawflag", 1, 0x16b0 } };
-}
-
-static HMODULE setup()
-{
-	HMODULE hProxiedDLL{ LoadLibraryA(internal::proxiedDll) };
-
-	for (const internal::Export& exportEntry : internal::exports)
+	if (fdwReason == DLL_PROCESS_ATTACH)
 	{
-		// uintptr_t pProxiedMethod{ reinterpret_cast<uintptr_t>(hProxiedDLL) + exportEntry.rva };
-		// uintptr_t pProxiedMethod{ reinterpret_cast<uintptr_t>(GetProcAddress(hProxiedDLL, MAKEINTRESOURCEA(exportEntry.ordinal))) };
-		uintptr_t pProxiedMethod{ reinterpret_cast<uintptr_t>(GetProcAddress(hProxiedDLL, exportEntry.name)) };
+		// Initialize the proxy for the DLL
+		dllforward::setup();
 
-		uintptr_t pProxyMethod{ reinterpret_cast<uintptr_t>(exportEntry.method) };
-
-#ifdef _WIN64
-		uint8_t opcodes[14]{ 0xFF, 0x25, 0x00, 0x00, 0x00, 0x00 };
-		*reinterpret_cast<uintptr_t*>(opcodes + 6) = pProxiedMethod;
-#else
-		uint8_t opcodes[5]{ 0xE9 };
-		*reinterpret_cast<uintptr_t*>(opcodes + 1) = pProxiedMethod - pProxyMethod - sizeof(opcodes);
-#endif
-
-		DWORD originalProtect, newProtect;
-		uint8_t* pProxyMethodBytes{ reinterpret_cast<uint8_t*>(pProxyMethod) };
-		VirtualProtect(pProxyMethodBytes, sizeof(opcodes), PAGE_EXECUTE_READWRITE, &originalProtect);
-		memcpy_s(pProxyMethodBytes, sizeof(opcodes), opcodes, sizeof(opcodes));
-		VirtualProtect(pProxyMethodBytes, sizeof(opcodes), originalProtect, &newProtect);
+		// Your code here to be executed when the DLL is loaded
 	}
 
-	return hProxiedDLL;
+	return TRUE;
 }
-}
 ```
 
-This header file should be included in your project where the implementation of the `DllMain` entry point is. You must call `dllforward::setup()` in DllMain when `fdwReason` is `DLL_PROCESS_ATTACH`.
+**Note:** There might be some need to modify the generated header file to change where the proxy DLL will look for the original DLL in order to load it. By default, it will be set to look for it on the same directory as it was when the header was generated, as an absolute path. The variable containing the path is `dllforward::internal::proxiedDll`.
 
-**Note:** `proxiedDll` is the path the process will look for the original, proxied DLL. If you wish to work with relative paths, keep in mind the path will be relative to the cwd of the process that loads the DLL forwarder. 
+Having done this you may rename the DLL you built to the name of the original DLL and place it in the same directory as the original DLL, and it will be loaded instead of the original DLL, having it's exports automatically redirected to the loading binary while also having your code run.
 
+### Creating a module definition example
 
-## Module definition generation example
+This is an alternate way to use the program where you can build a module definition `.def` file from the input DLL, which can be used to generate a stub library with `lib.exe` or similar tools.
+
 ```bash
-DLLForward -d "C:/Windows/System32/msimg32.dll" "./outdefinition.def"
-```
-Should generate the following definition file at **outdefinition.def**:
-
-```
-; DLLForward by itisluiz v1.2
-LIBRARY msimg32
-EXPORTS
-;	#2: AlphaBlend
-	AlphaBlend
-
-;	#3: DllInitialize
-	DllInitialize
-
-;	#4: GradientFill
-	GradientFill
-
-;	#5: TransparentBlt
-	TransparentBlt
-
-;	#1: vSetDdrawflag
-	vSetDdrawflag
-
+DLLForward -d "C:/Windows/System32/msimg32.dll" "./msimg32.def"
 ```
 
-Which in turn can be used to generate a stub (impblib) library with [lib.exe](https://learn.microsoft.com/en-us/cpp/build/reference/lib-reference?view=msvc-170):
+This will generate a module definition file `msimg32.def` at the current directory, it contains information about all the exports of the DLL.
+
+By using a tool such as Microsoft's [lib.exe](https://learn.microsoft.com/en-us/cpp/build/reference/lib-reference?view=msvc-170) you can generate a stub library from the module definition file, which can be used to link against the original DLL, allowing you to create a project that consumes said DLL and properly resolves the imports without manually resolving the addresses with [GetProcAddress](https://docs.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-getprocaddress) for example.
+
+Example usage of `lib.exe` to generate a stub library from the module definition file:
 ```bash
-lib /def:outdefinition.def /out:outimplib.lib /machine:x64
-````
+lib /def:msimg32.def /out:msimg32.lib /machine:x64
+```
+
+This will generate a stub library `msimg32.lib` at the current directory, which can be used to link against your projects on which you wish to use the DLL.
+
+## Roadmap
+- [x] Allow for x86 and x64 proxy DLLs, debug or release.
+- [ ] Allow for control of the proxy DLL's header with macros defined before including the header.
+- [ ] Optional smarter and more robust ways of locating the original DLL.
+- [ ] Create a parent project for generically generating and compiling a proxy DLL, with options to load other DLLs on a text file.
+
+## Building (With Visual Studio)
+1. Clone the repository recursively to get the submodules: `git clone --recurse-submodules https://github.com/itisluiz/DLLForward`\
+(If you didn't clone the repository recursively, you can initialize the submodules with `git submodule update --init --recursive`)
+2. Launch Visual Studio -> Select "Continue without code" -> File -> Open -> CMake -> Open the `CMakeLists.txt` file in the repository root.
+3. Select your architecture at the top and build the project with `Ctrl + Shift + B`.
+
+## Contributing
+Pull requests are welcome, so are issues with suggestions or bug reports. For major changes, please open an issue first to discuss what you would like to change.
