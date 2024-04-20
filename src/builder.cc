@@ -36,7 +36,7 @@ void buildResultHeader(const fs::path& dllPath, const fs::path& outFile, Archite
 
     file << "#pragma optimize(\"\", on)" "\n\n";
 
-    file << "constexpr char proxiedDll[]{ " << dllPath << " };" "\n";
+    file << "constexpr char originalProxiedDll[]{ " << dllPath << " };" "\n";
     file << "constexpr Export exports[]{ ";
     for (const Export& exportEntry : exports)
         file << BUILD_EXPORT_ENTRY(exportEntry.name, exportEntry.ordinal, exportEntry.rva);

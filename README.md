@@ -1,5 +1,5 @@
 # DLL Forward
-![my machine badge](https://forthebadge.com/images/badges/works-on-my-machine.svg)
+![my machine badge](https://forthebadge.com/images/badges/pretty-risque.svg)
 ![workflow badge](https://github.com/itisluiz/DLLForward/actions/workflows/build.yml/badge.svg)
 
 DLL Forward is a tool that allows for creation of, x86 or x64, mangled or unmangled signature, DLL proxies, redirecting the exports of an arbitrary DLL through your DLL instead.
@@ -27,6 +27,9 @@ Example project using the generated header (The project must be configured to bu
 `main.cpp`
 ```cpp	
 #include "Windows.h"
+
+// You can specify the path to the original through a macro
+// #define DLLFORWARD_ORIGINALDLLPATH ".\\msimg32.original.dll"
 #include "msimg32.h"
 
 BOOL WINAPI DllMain(HMODULE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
@@ -43,7 +46,15 @@ BOOL WINAPI DllMain(HMODULE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 }
 ```
 
-**Note:** There might be some need to modify the generated header file to change where the proxy DLL will look for the original DLL in order to load it. By default, it will be set to look for it on the same directory as it was when the header was generated, as an absolute path. The variable containing the path is `dllforward::internal::proxiedDll`.
+**Note:** There might be some need to modify the generated header file to change where the proxy DLL will look for the original DLL in order to load it.
+
+Here are some macros you can define **before importing the generated header** to modify behavior:
+- `DLLFORWARD_ORIGINALDLLPATH`: Sets the path to the original (proxied) DLL. If not specified, will be the absolute path to the DLL used to create the proxy header.
+- `DLLFORWARD_RESOLVEPROC_NAME`: Resolve exports through the names. **This is the default option**.
+- `DLLFORWARD_RESOLVEPROC_RVA`: Resolve exports through the relative virtual addresses
+- `DLLFORWARD_RESOLVEPROC_ORDINAL`: Resolve exports through the ordinals
+
+In practice resolving through the name should be more robust and there is no need to change it, but the option is available should the need arise.
 
 Having done this you may rename the DLL you built to the name of the original DLL and place it in the same directory as the original DLL, and it will be loaded instead of the original DLL, having it's exports automatically redirected to the loading binary while also having your code run.
 
@@ -68,8 +79,9 @@ This will generate a stub library `msimg32.lib` at the current directory, which 
 
 ## Roadmap
 - [x] Allow for x86 and x64 proxy DLLs, debug or release.
-- [ ] Allow for control of the proxy DLL's header with macros defined before including the header.
+- [x] Allow for control of the proxy DLL's header with macros defined before including the header.
 - [ ] Optional smarter and more robust ways of locating the original DLL.
+- [ ] Support wide characters in paths.
 - [ ] Create a parent project for generically generating and compiling a proxy DLL, with options to load other DLLs on a text file.
 
 ## Building (With Visual Studio)

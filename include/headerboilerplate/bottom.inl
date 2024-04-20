@@ -1,16 +1,24 @@
 R"(
 static HMODULE setup()
 {
-	HMODULE hProxiedDLL{ LoadLibraryA(internal::proxiedDll) };
+#ifdef DLLFORWARD_ORIGINALDLLPATH
+	HMODULE hProxiedDLL{ LoadLibraryA(DLLFORWARD_ORIGINALDLLPATH) };
+#else
+	HMODULE hProxiedDLL{ LoadLibraryA(internal::originalProxiedDll) };
+#endif
 
 	if (!hProxiedDLL)
 		return NULL;
 
 	for (const internal::Export& exportEntry : internal::exports)
 	{
-		// uintptr_t pProxiedMethod{ reinterpret_cast<uintptr_t>(hProxiedDLL) + exportEntry.rva };
-		// uintptr_t pProxiedMethod{ reinterpret_cast<uintptr_t>(GetProcAddress(hProxiedDLL, MAKEINTRESOURCEA(exportEntry.ordinal))) };
+#ifdef DLLFORWARD_RESOLVEPROC_RVA
+		uintptr_t pProxiedMethod{ reinterpret_cast<uintptr_t>(hProxiedDLL) + exportEntry.rva };
+#elif defined(DLLFORWARD_RESOLVEPROC_ORDINAL)
+		uintptr_t pProxiedMethod{ reinterpret_cast<uintptr_t>(GetProcAddress(hProxiedDLL, MAKEINTRESOURCEA(exportEntry.ordinal))) };
+#else
 		uintptr_t pProxiedMethod{ reinterpret_cast<uintptr_t>(GetProcAddress(hProxiedDLL, exportEntry.name)) };
+#endif
 
 		uintptr_t pProxyMethod{ reinterpret_cast<uintptr_t>(exportEntry.method) };
 
