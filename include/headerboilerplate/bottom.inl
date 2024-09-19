@@ -1,10 +1,12 @@
 R"(
 static HMODULE setup()
 {
-#ifdef DLLFORWARD_ORIGINALDLLPATH
+#ifdef DLLFORWARD_ORIGINALDLLPATH_W
+	HMODULE hProxiedDLL{ LoadLibraryW(DLLFORWARD_ORIGINALDLLPATH_W) };
+#elif defined(DLLFORWARD_ORIGINALDLLPATH)
 	HMODULE hProxiedDLL{ LoadLibraryA(DLLFORWARD_ORIGINALDLLPATH) };
 #else
-	HMODULE hProxiedDLL{ LoadLibraryA(internal::originalProxiedDll) };
+	HMODULE hProxiedDLL{ LoadLibraryW(internal::originalProxiedDll) };
 #endif
 
 	if (!hProxiedDLL)

@@ -1,7 +1,7 @@
 #include <forwarder.hh>
+#include <CLI/CLI.hpp>
 #include <iostream>
 #include <filesystem>
-#include <cxxopts.hpp>
 
 namespace fs = std::filesystem;
 
@@ -17,60 +17,47 @@ struct ExitCodes
 
 int main(int argc, char* argv[])
 {
-	cxxopts::Options options(fs::path(argv[0]).filename().string(), "Generate files for creating a DLL Proxy (Man in the middle) to any other DLL.");
+	CLI::App app("Generate files for creating a DLL Proxy (Man in the middle) to any other DLL.", "DLLForward");
+	
+	fs::path dllPath, outFile;
+	bool defMode{ false };
 
-	options.add_options()
-		("i,input", "Input DLL path", cxxopts::value<std::string>(), "The DLL that will be proxied, be mindful of the DLL's architecture/bitness.")
-		("o,output", "Output header file path", cxxopts::value<std::string>()->default_value("./"), "Output path of the resulting file generated from the input DLL.")
-		("d,def", "Create a module definition (.def file) instead of a header for proxying.")
-		("h,help", "Print usage");
+	app.add_option("input", dllPath, "The DLL that will be proxied, be mindful of the DLL's architecture/bitness.")->required()->check(CLI::ExistingFile);
+	app.add_option("output", outFile, "Output path of the resulting file generated from the input DLL.");
+	app.add_flag("-d,--def", defMode, "Generate a .def file instead of a .h file.");
+	app.set_version_flag("-v,--version", "DLLForward v" PROJECT_VERSION);
 
-	options.parse_positional({ "input", "output" });
-	options.positional_help("input output");
-	options.show_positional_help();
-
-	bool argDef;
-	fs::path argInput,argOutput;
 	try
 	{
-		cxxopts::ParseResult result{ options.parse(argc, argv) };
-
-		if (result["help"].count())
+		argv = app.ensure_utf8(argv);
+		app.parse(argc, argv);
+	}
+	catch (const CLI::ParseError& e)
+	{
+		if (e.get_exit_code() == 0)
 		{
-			std::cout << options.help();
+			std::cout << e.what() << '\n';
 			return ExitCodes::kSuccess;
 		}
 
-		argInput = result["input"].as<std::string>();
-		argOutput = result["output"].as<std::string>();
-		argDef = result["def"].count();
+		std::cerr << "Bad argument provided: " << e.what() << '\n';
+		return ExitCodes::kBadArgs;
 	}
-	catch (const cxxopts::exceptions::exception& e)
+	
+	if (outFile.empty() || fs::is_directory(outFile))
+		outFile /= dllPath.filename().replace_extension();
+
+	if (!outFile.has_extension())
+		outFile = outFile.replace_extension(defMode ? ".def" : ".h");
+
+	if (!fs::is_directory(fs::absolute(outFile).parent_path()))
 	{
-		std::cerr << options.help() << '\n' << e.what();
+		std::cerr << "Output directory does not exist" "\n";
 		return ExitCodes::kBadArgs;
 	}
 
-	if (!fs::is_regular_file(argInput))
-	{
-		std::cerr << "Invalid input DLL path " << argInput << '\n';
-		return ExitCodes::kBadArgs;
-	}
+	if (defMode)
+		return makeDefinition(dllPath, outFile) ? ExitCodes::kSuccess : ExitCodes::kFailed;
 
-	if (!fs::is_directory(argOutput.parent_path()))
-	{
-		std::cerr << "Invalid output path " << argOutput << '\n';
-		return ExitCodes::kBadArgs;
-	}
-
-	if (fs::is_directory(argOutput))
-		argOutput /= argInput.filename().replace_extension();
-
-	if (!argOutput.has_extension())
-		argOutput.replace_extension(argDef ? ".def" : ".h");
-
-	if (argDef)
-		return makeDefinition(argInput, argOutput) ? ExitCodes::kSuccess : ExitCodes::kFailed;
-	else
-		return makeHeader(argInput, argOutput) ? ExitCodes::kSuccess : ExitCodes::kFailed;
+	return makeHeader(dllPath, outFile) ? ExitCodes::kSuccess : ExitCodes::kFailed;
 }

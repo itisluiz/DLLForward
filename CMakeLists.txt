@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project("dllforward" VERSION 1.2.2 LANGUAGES CXX)
+project("dllforward" VERSION 1.3 LANGUAGES CXX)
 
 ## Project's base, containing all that's to be inherited
 set(PROJECT_BASE ${PROJECT_NAME}-base)
@@ -11,11 +11,11 @@ target_include_directories(${PROJECT_BASE} INTERFACE "include")
 target_compile_definitions(${PROJECT_BASE} INTERFACE PROJECT_VERSION="${PROJECT_VERSION}" BUILD_SHARED_LIBS=$<BOOL:${BUILD_SHARED_LIBS}>)
 
 ## Project's dependencies adding and linking
-if(NOT TARGET cxxopts)
-	add_subdirectory("lib/cxxopts")
+if(NOT TARGET CLI11)
+	add_subdirectory("lib/cli11")
 endif()
 
-target_link_libraries(${PROJECT_BASE} INTERFACE cxxopts::cxxopts imagehlp)
+target_link_libraries(${PROJECT_BASE} INTERFACE CLI11 imagehlp)
 
 ## Source globbing, exclude main file
 file(GLOB_RECURSE PROJECT_SOURCES "src/*.cpp" "src/*.cxx" "src/*.cc")

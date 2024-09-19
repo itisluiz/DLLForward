@@ -1,5 +1,5 @@
 # DLL Forward
-![my machine badge](https://forthebadge.com/images/badges/pretty-risque.svg)
+![silly badge](https://img.shields.io/badge/Made%20with-hacky%20opcodes-blue)
 ![workflow badge](https://github.com/itisluiz/DLLForward/actions/workflows/build.yml/badge.svg)
 
 DLL Forward is a tool that allows for creation of, x86 or x64, mangled or unmangled signature, DLL proxies, redirecting the exports of an arbitrary DLL through your DLL instead.
@@ -8,12 +8,13 @@ DLL Forward is a tool that allows for creation of, x86 or x64, mangled or unmang
 After downloading the binaries or building the project for yourself, you may use the generated executable as follows:
 
 ```bash
-DLLForward [--def] <input> <output (optional)>
+DLLForward [--def] [--version] <input> <output (optional)>
 ```
 Where the parameters represent:
 - **input**: The input DLL file path which will be proxied, choose the desired architecture instance (x86 or x64) of the DLL to proxy.
 - **output**: The output path, which is a file built from the the input DLL's data, by default a **header (.h)** with the same name as the proxied DLL.
--  **def**: Or `-d` for short, if set will generate a **module definition (.def)** instead of a proxy header from the input DLL.
+- **def**: Or `-d` for short, if set will generate a **module definition (.def)** instead of a proxy header from the input DLL.
+- **version**: Or `-v` for short, will print the version of the program and exit.
 
 ### Creating a proxy example
 ```bash
@@ -28,8 +29,9 @@ Example project using the generated header (The project must be configured to bu
 ```cpp	
 #include "Windows.h"
 
-// You can specify the path to the original through a macro
+// You can specify the path to the original through a macro, or it's wide character version
 // #define DLLFORWARD_ORIGINALDLLPATH ".\\msimg32.original.dll"
+// #define DLLFORWARD_ORIGINALDLLPATH_W L".\\msimg32.original.dll"
 #include "msimg32.h"
 
 BOOL WINAPI DllMain(HMODULE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
@@ -50,6 +52,9 @@ BOOL WINAPI DllMain(HMODULE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 
 Here are some macros you can define **before importing the generated header** to modify behavior:
 - `DLLFORWARD_ORIGINALDLLPATH`: Sets the path to the original (proxied) DLL. If not specified, will be the absolute path to the DLL used to create the proxy header.
+- `DLLFORWARD_ORIGINALDLLPATH_W`: Same as above but for wide characters, has priority over the non-wide version.
+
+Export resolution methods:
 - `DLLFORWARD_RESOLVEPROC_NAME`: Resolve exports through the names. **This is the default option**.
 - `DLLFORWARD_RESOLVEPROC_RVA`: Resolve exports through the relative virtual addresses
 - `DLLFORWARD_RESOLVEPROC_ORDINAL`: Resolve exports through the ordinals
@@ -81,7 +86,7 @@ This will generate a stub library `msimg32.lib` at the current directory, which 
 - [x] Allow for x86 and x64 proxy DLLs, debug or release.
 - [x] Allow for control of the proxy DLL's header with macros defined before including the header.
 - [ ] Optional smarter and more robust ways of locating the original DLL.
-- [ ] Support wide characters in paths.
+- [x] Support wide characters in paths.
 - [ ] Create a parent project for generically generating and compiling a proxy DLL, with options to load other DLLs on a text file.
 
 ## Building (With Visual Studio)

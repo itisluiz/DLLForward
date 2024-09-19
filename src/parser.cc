@@ -1,4 +1,5 @@
 #include <parser.hh>
+#include <encoding.hh>
 #include <fstream>
 #include <iostream>
 #include <Windows.h>
@@ -57,7 +58,7 @@ std::vector<Export> parseExports(const fs::path& path)
         throw std::system_error(std::error_code(GetLastError(), std::system_category()), "Failed to disable Wow64Fs redirection");
 #endif
 
-    if (!MapAndLoad(path.u8string().c_str(), nullptr, &LoadedImage, TRUE, TRUE))
+    if (!MapAndLoad(ansiPathString(path).c_str(), nullptr, &LoadedImage, TRUE, TRUE))
         throw std::system_error(std::error_code(GetLastError(), std::system_category()), "MapAndLoad failed to load DLL");
 
 #ifndef _WIN64

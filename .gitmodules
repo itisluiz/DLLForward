@@ -1,3 +1,3 @@
-[submodule "lib/cxxopts"]
-	path = lib/cxxopts
-	url = git@github.com:jarro2783/cxxopts.git
+[submodule "lib/cli11"]
+	path = lib/cli11
+	url = git@github.com:CLIUtils/CLI11.git

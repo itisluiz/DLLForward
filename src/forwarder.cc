@@ -1,6 +1,7 @@
 #include <forwarder.hh>
 #include <parser.hh>
 #include <builder.hh>
+#include <encoding.hh>
 #include <iostream>
 #include <fstream>
 
@@ -48,7 +49,7 @@ bool makeHeader(const fs::path& dllPath, const fs::path& outFile)
 		std::pair<Architecture, std::vector<Export>> archExports{ acquireArchExports(dllPath) };
 
 		buildResultHeader(dllPath, outFile, archExports.first, archExports.second);
-		std::cout << "Generated output at \"" << fs::absolute(outFile).string() << "\"" "\n";
+		std::cout << "Generated output at " << utf8String(escapedPathString(fs::absolute(outFile))) << '\n';
 	}
 	catch (const std::system_error& e)
 	{
@@ -71,7 +72,7 @@ bool makeDefinition(const fs::path& dllPath, const fs::path& outFile)
 		std::pair<Architecture, std::vector<Export>> archExports{ acquireArchExports(dllPath) };
 
 		buildResultDefinition(dllPath, outFile, archExports.second);
-		std::cout << "Generated output at \"" << fs::absolute(outFile).string() << "\"" "\n";
+		std::cout << "Generated output at " << utf8String(escapedPathString(fs::absolute(outFile))) << '\n';
 	}
 	catch (const std::system_error& e)
 	{

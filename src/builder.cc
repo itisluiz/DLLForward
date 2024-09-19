@@ -1,4 +1,5 @@
 #include <builder.hh>
+#include <encoding.hh>
 #include <fstream>
 
 #define BUILD_EXPORT_IDENTIFIER(ordinal) "__EXPORT_DUMMY" << ordinal
@@ -18,7 +19,7 @@ void buildResultHeader(const fs::path& dllPath, const fs::path& outFile, Archite
 #include <headerboilerplate/top.inl>
         << '\n';
 
-    file << "// Proxy header generated for " << dllPath.filename().string();
+    file << "// Proxy header generated for " << utf8String(dllPath.filename().wstring());
     
     if (architecture != Architecture::kUnknown)
     {
@@ -36,7 +37,7 @@ void buildResultHeader(const fs::path& dllPath, const fs::path& outFile, Archite
 
     file << "#pragma optimize(\"\", on)" "\n\n";
 
-    file << "constexpr char originalProxiedDll[]{ " << dllPath << " };" "\n";
+    file << "constexpr wchar_t originalProxiedDll[]{ L" << utf8String(escapedPathString(dllPath)) << " };" "\n";
     file << "constexpr Export exports[]{ ";
     for (const Export& exportEntry : exports)
         file << BUILD_EXPORT_ENTRY(exportEntry.name, exportEntry.ordinal, exportEntry.rva);
@@ -57,7 +58,7 @@ void buildResultDefinition(const fs::path& dllPath, const fs::path& outFile, con
 
     file << "; DLLForward by itisluiz v" PROJECT_VERSION << '\n';
 
-    file << "LIBRARY " << dllPath.filename().replace_extension().string() << '\n';
+    file << "LIBRARY " << utf8String(dllPath.filename().replace_extension().wstring()) << '\n';
     file << "EXPORTS";
 
     for (const Export& exportEntry : exports)
